@@ -12,19 +12,19 @@ const server = http.createServer(app);
 // Create Socket.IO instance and attach it to the server
 const io = new SocketIO(server, {
   cors: {
-    origin: "http://localhost:3001", // Replace with your React app's origin
+    origin: "https://letzkhelo.com", // Replace with your React app's origin
     methods: ["GET", "POST"]
   }
 });
 
 app.use(cors());
 
-// API endpoint for sending messages with user name
+// API endpoint for sending messages with user name and room ID
 app.post('/api/send-message', (req, res) => {
-    const { message, userName } = req.body;
+    const { message, userName, roomId } = req.body;
   
-    // Broadcast the message and user name to all connected clients
-    io.emit('chat message', { userName, message });
+    // Broadcast the message and user name to the specific room
+    io.to(roomId).emit('chat message', { userName, message });
   
     res.json({ success: true, message: 'Message sent successfully' });
 });
@@ -33,10 +33,18 @@ app.post('/api/send-message', (req, res) => {
 io.on('connection', (socket) => {
   console.log('A user connected');
   
+  // Listen for joining a room
+  socket.on('join room', (roomId) => {
+    // Join the specified room
+    socket.join(roomId);
+    console.log(`User joined room ${roomId}`);
+  });
+
   // Listen for chat messages
-  socket.on('chat message', ({ userName, message }) => {
-    // Broadcast the message and user name to all connected clients
-    io.emit('chat message', { userName, message });
+  socket.on('chat message', ({ userName, message, roomId }) => {
+    // Broadcast the message and user name to the specific room
+    console.log(userName,message,roomId)
+    io.to(roomId).emit('chat message', { userName, message });
   });
   
   // Handle user disconnection
@@ -46,7 +54,7 @@ io.on('connection', (socket) => {
 });
 
 // Start the server
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
